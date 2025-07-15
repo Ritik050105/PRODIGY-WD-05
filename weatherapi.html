@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #89bdea;
+            color: #333;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .weather-container {
+            background-color: rgba(255, 255, 255, 0.605);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            min-height: 300px;
+        }
+        
+        .current-weather {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .weather-icon {
+            width: 100px;
+            height: 100px;
+            margin-right: 20px;
+        }
+        
+        .temp {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .details {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .detail-item {
+            margin: 10px;
+            padding: 15px;
+            background-color: #e8f4fc;
+            border-radius: 8px;
+            min-width: 120px;
+            flex: 1;
+        }
+        
+        .loading {
+            font-style: italic;
+            color: #7f8c8d;
+            padding: 50px 0;
+        }
+        
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+            padding: 50px 0;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .location-info {
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        
+        .weather-description {
+            text-transform: capitalize;
+            margin: 5px 0;
+        }
+        
+        @media (max-width: 600px) {
+            .current-weather {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .weather-icon {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            
+            .detail-item {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Weather App</h1>
+    
+    <div class="location-info" id="location-info">
+        <p>Getting your location...</p>
+    </div>
+    
+    <div class="weather-container" id="weather-display">
+        <div class="loading">Loading weather data...</div>
+    </div>
+    
+    <button id="refresh-btn">Refresh Data</button>
+    
+    <script>
+        const API_KEY = 'c542f36b968a49519a4120041250807'; 
+        const API_BASE_URL = 'https://api.weatherapi.com/v1/current.json';
+        const locationInfo = document.getElementById('location-info');
+        const weatherDisplay = document.getElementById('weather-display');
+        const refreshBtn = document.getElementById('refresh-btn');
+        
+        let permissionGranted = false;
+        
+        function showPermissionInstructions() {
+            weatherDisplay.innerHTML = `
+                <div class="error">
+                    <h3>Location Access Required</h3>
+                    <p>This app needs your location to show local weather.</p>
+                    <ol>
+                        <li>Refresh this page</li>
+                        <li>Look for the location permission prompt</li>
+                        <li>Click "Allow" or "Allow once"</li>
+                    </ol>
+                    <p>If you don't see the prompt, check your browser settings:</p>
+                    <ul>
+                        <li><strong>Chrome:</strong> Click the lock icon (🔒) > Site settings > Location > Allow</li>
+                        <li><strong>Firefox:</strong> Options > Privacy & Security > Permissions > Location > Settings</li>
+                        <li><strong>Safari:</strong> Preferences > Websites > Location</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        async function fetchWeatherData(lat, lon) {
+            try {
+                const url = `${API_BASE_URL}?key=${API_KEY}&q=${lat},${lon}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Weather data not available');
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                throw error;
+            }
+        }
+        
+
+        function displayWeatherData(data) {
+            const current = data.current;
+            const location = data.location;
+            
+            const weatherHTML = `
+                <h2>${location.name}, ${location.country}</h2>
+                <div class="current-weather">
+                    <img src="${current.condition.icon}" alt="${current.condition.text}" class="weather-icon">
+                    <div>
+                        <div class="temp">${Math.round(current.temp_c)}°C</div>
+                        <div class="weather-description">${current.condition.text}</div>
+                    </div>
+                </div>
+                <div class="details">
+                    <div class="detail-item">
+                        <div>🌡️ Feels Like</div>
+                        <div>${Math.round(current.feelslike_c)}°C</div>
+                    </div>
+                    <div class="detail-item">
+                        <div>💧 Humidity</div>
+                        <div>${current.humidity}%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div>🌬️ Wind</div>
+                        <div>${current.wind_kph} km/h</div>
+                    </div>
+                    <div class="detail-item">
+                        <div>📊 Pressure</div>
+                        <div>${current.pressure_mb} hPa</div>
+                    </div>
+                    <div class="detail-item">
+                        <div>👀 Visibility</div>
+                        <div>${current.vis_km} km</div>
+                    </div>
+                    <div class="detail-item">
+                        <div>☁️ Cloud Cover</div>
+                        <div>${current.cloud}%</div>
+                    </div>
+                </div>
+                <p>Last updated: ${location.localtime}</p>
+            `;
+            
+            weatherDisplay.innerHTML = weatherHTML;
+        }
+        
+        async function getLocationAndWeather() {
+    locationInfo.innerHTML = '<p>Detecting your location...</p>';
+    weatherDisplay.innerHTML = '<div class="loading">Loading weather data...</div>';
+    refreshBtn.disabled = true;
+    
+    try {
+        const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+                resolve,
+                () => {
+                    resolve({
+                        coords: {
+                            latitude: 40.7128,
+                            longitude: -74.0060,
+                            accuracy: 10000 
+                        }
+                    });
+                },
+                {
+                    timeout: 5000,
+                    maximumAge: 600000,
+                    enableHighAccuracy: true
+                }
+            );
+        });
+
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        
+        if (position.coords.accuracy > 1000) {
+            locationInfo.innerHTML = `
+                <p>📍 Showing weather for location Latitude: ${lat.toFixed(4)}°N, Longitude: ${lon.toFixed(4)}°W</p>
+                <p>Latitude: ${lat.toFixed(4)}°N, Longitude: ${lon.toFixed(4)}°W</p>
+            `;
+        } else {
+            locationInfo.innerHTML = `
+                <p>📍 Your location: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E</p>
+            `;
+        }
+        
+        const weatherData = await fetchWeatherData(lat, lon);
+        displayWeatherData(weatherData);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        weatherDisplay.innerHTML = `
+            <div class="error">
+                <p>Failed to get weather data.</p>
+                <p>${error.message || 'Please try again later.'}</p>
+            </div>
+        `;
+    } finally {
+        refreshBtn.disabled = false;
+    }
+}
+        
+        refreshBtn.addEventListener('click', getLocationAndWeather);
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!navigator.geolocation) {
+                weatherDisplay.innerHTML = `
+                    <div class="error">
+                        <p>Geolocation is not supported by your browser.</p>
+                        <p>Please try a modern browser like Chrome, Firefox, or Edge.</p>
+                    </div>
+                `;
+                refreshBtn.disabled = true;
+                return;
+            }
+            getLocationAndWeather();
+        });
+    </script>
+</body>
+</html>
